@@ -1,6 +1,16 @@
 import * as Haptics from "expo-haptics";
-import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
-import { Animated, Dimensions, Modal, PanResponder, Platform, Pressable, View } from "react-native";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import {
+    Animated,
+    Dimensions,
+    Keyboard,
+    Modal,
+    PanResponder,
+    Platform,
+    Pressable,
+    KeyboardEvent as RNKeyboardEvent,
+    View,
+} from "react-native";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -70,6 +80,29 @@ export const BottomSheet = forwardRef<BottomSheetRef, BottomSheetProps>(
         const isPanning = useRef(false);
 
         const snapHeights = snapPoints.map((point) => SCREEN_HEIGHT * (1 - point));
+
+        const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+        useEffect(() => {
+            const onKeyboardShow = (e: RNKeyboardEvent) => {
+                setKeyboardHeight(e.endCoordinates.height);
+            };
+            const onKeyboardHide = () => setKeyboardHeight(0);
+
+            const showSub = Keyboard.addListener(
+                Platform.OS === "android" ? "keyboardDidShow" : "keyboardWillShow",
+                onKeyboardShow
+            );
+            const hideSub = Keyboard.addListener(
+                Platform.OS === "android" ? "keyboardDidHide" : "keyboardWillHide",
+                onKeyboardHide
+            );
+
+            return () => {
+                showSub.remove();
+                hideSub.remove();
+            };
+        }, []);
 
         const triggerHaptic = useCallback(() => {
             if (Platform.OS !== "web") {
@@ -237,7 +270,7 @@ export const BottomSheet = forwardRef<BottomSheetRef, BottomSheetProps>(
                     <Animated.View
                         style={{
                             transform: [{ translateY }],
-                            height: SCREEN_HEIGHT,
+                            height: SCREEN_HEIGHT - keyboardHeight,
                         }}
                         className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl"
                         accessible
